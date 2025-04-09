@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .panel {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .image-preview {
+            max-width: 100%;
+            margin-top: 20px;
+            border: 1px solid #ddd;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .upload-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .copy-btn {
+            background-color: #2196F3;
+            color: white;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Image Tracking System</h1>
+        
+        <div class="panel">
+            <h2>Upload Image</h2>
+            <p>Upload a "good morning" or other image that you want to make trackable:</p>
+            <input type="file" id="imageUpload" accept="image/*">
+            <button class="upload-btn" id="processImage">Process Image</button>
+            <div>
+                <img id="previewImage" class="image-preview" style="display: none;">
+            </div>
+        </div>
+        
+        <div class="panel" id="trackingPanel" style="display: none;">
+            <h2>Tracking Link</h2>
+            <p>Share this image link via WhatsApp, email, or any other platform:</p>
+            <div style="display: flex; margin-bottom: 10px;">
+                <input type="text" id="trackingLink" style="flex: 1; padding: 8px;" readonly>
+                <button class="copy-btn" id="copyLink">Copy</button>
+            </div>
+            <p><strong>Note:</strong> When someone opens this image, their basic information will be recorded.</p>
+        </div>
+        
+        <div class="panel" id="resultsPanel" style="display: none;">
+            <h2>Tracking Results</h2>
+            <p>The following people have viewed your image:</p>
+            <table id="resultsTable">
+                <thead>
+                    <tr>
+                        <th>Date/Time</th>
+                        <th>IP Address</th>
+                        <th>Device</th>
+                        <th>Location</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody">
+                    <!-- Results will be populated here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const imageUpload = document.getElementById('imageUpload');
+            const processImage = document.getElementById('processImage');
+            const previewImage = document.getElementById('previewImage');
+            const trackingPanel = document.getElementById('trackingPanel');
+            const trackingLink = document.getElementById('trackingLink');
+            const copyLink = document.getElementById('copyLink');
+            const resultsPanel = document.getElementById('resultsPanel');
+            const resultsBody = document.getElementById('resultsBody');
+            
+            // Demo tracking ID - in a real implementation this would be generated on the server
+            let trackingId = '';
+            
+            processImage.addEventListener('click', function() {
+                if (imageUpload.files.length === 0) {
+                    alert('Please select an image first');
+                    return;
+                }
+                
+                const file = imageUpload.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    previewImage.src = e.target.result;
+                    previewImage.style.display = 'block';
+                    
+                    // Generate a tracking ID (in a real implementation, this would happen on the server)
+                    trackingId = 'track_' + Math.random().toString(36).substring(2, 15);
+                    
+                    // In a real implementation, this would be your server endpoint
+                    const serverUrl = 'http://localhost:3000/track';
+                    trackingLink.value = `${serverUrl}/${trackingId}`;
+                    
+                    trackingPanel.style.display = 'block';
+                    resultsPanel.style.display = 'block';
+                    
+                    // For demo purposes, we're adding mock data
+                    addMockData();
+                };
+                
+                reader.readAsDataURL(file);
+            });
+            
+            copyLink.addEventListener('click', function() {
+                trackingLink.select();
+                document.execCommand('copy');
+                alert('Link copied to clipboard!');
+            });
+            
+            // This function adds mock data for demonstration purposes
+            function addMockData() {
+                const mockData = [
+                    {
+                        datetime: new Date().toLocaleString(),
+                        ip: '192.168.1.105',
+                        device: 'iPhone (iOS 17)',
+                        location: 'New York, USA'
+                    }
+                ];
+                
+                resultsBody.innerHTML = '';
+                mockData.forEach(data => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${data.datetime}</td>
+                        <td>${data.ip}</td>
+                        <td>${data.device}</td>
+                        <td>${data.location}</td>
+                    `;
+                    resultsBody.appendChild(row);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
