@@ -5,9 +5,11 @@ const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const os = require('os');
+const geoip = require('geoip-lite');
+const ipaddr = require('ipaddr.js');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 5050;
 
 // Function to get local IP addresses
 function getLocalIPs() {
@@ -218,12 +220,17 @@ app.get('/track-view/:id', async (req, res) => {
   const language = req.headers['accept-language'] || 'Unknown';
   const referrer = req.headers.referer || 'Direct';
   
-  // Get approximate geolocation
+  // Get detailed IP geolocation
   const geoInfo = await getIPGeolocation(clientIp);
   
   const viewData = {
     timestamp: new Date(),
     ip: clientIp,
+    ipInfo: {
+      version: geoInfo.ipVersion || 'Unknown',
+      networkType: geoInfo.networkType || 'Unknown',
+      provider: geoInfo.org || 'Unknown'
+    },
     userAgent: userAgent,
     rawUserAgent: rawUserAgent,
     operatingSystem: operatingSystem,
@@ -232,6 +239,7 @@ app.get('/track-view/:id', async (req, res) => {
     city: geoInfo.city,
     region: geoInfo.region,
     loc: geoInfo.loc,
+    timezone: geoInfo.timezone,
     referrer: referrer,
     source: 'Website View',
     headers: Object.keys(req.headers).reduce((obj, key) => {
@@ -990,45 +998,130 @@ app.listen(port, () => {
   console.log('4. When the recipient views the image, their browser, IP, and device info will be logged');
 });
 
-// Function to get estimated geolocation from IP
-// This is a very simplified version - in production, use a proper geolocation API
+// Function to get detailed geolocation and network info from IP
 async function getIPGeolocation(ip) {
-  // Skip lookup for local IPs
-  if (ip === '::1' || ip === '127.0.0.1' || ip.includes('192.168.') || ip.includes('10.0.')) {
-    return {
-      country: 'Local Network',
-      city: 'Local Machine'
-    };
+  console.log(`Looking up geolocation for IP: ${ip}`);
+  
+  // Clean up the IP address (remove IPv6 prefix if needed)
+  let cleanIp = ip;
+  if (ip.includes('::ffff:')) {
+    cleanIp = ip.replace('::ffff:', '');
   }
   
-  // In production, you would use a service like:
-  // - ipinfo.io
-  // - ipapi.co
-  // - ipgeolocation.io
-  // - ipdata.co
-  
-  // Here's how you would integrate with ipinfo.io:
-  /*
+  // Check if it's a private/local IP
   try {
-    const response = await fetch(`https://ipinfo.io/${ip}/json?token=YOUR_TOKEN_HERE`);
-    const data = await response.json();
-    return {
-      country: data.country,
-      city: data.city,
-      region: data.region,
-      timezone: data.timezone,
-      loc: data.loc // latitude,longitude
-    };
-  } catch (error) {
-    console.error('Error getting IP geolocation:', error);
-    return { country: 'Unknown', city: 'Unknown' };
+    const addr = ipaddr.parse(cleanIp);
+    const ipType = addr.range();
+    
+    if (['loopback', 'private', 'linkLocal', 'uniqueLocal'].includes(ipType)) {
+      return {
+        country: 'Local Network',
+        city: 'Local Device',
+        networkType: 'Private Network',
+        ipVersion: addr.kind(),
+        ipClass: ipType
+      };
+    }
+    
+    // Classify IPv6 addresses
+    if (addr.kind() === 'ipv6') {
+      let networkType = 'Public Network';
+      
+      // Try to determine if it's mobile or residential based on common patterns
+      const ipString = addr.toString();
+      
+      if (ipString.includes('mobile') || ipString.includes('cellular')) {
+        networkType = 'Mobile Network';
+      }
+      
+      // For IPv6, we'll use geoip lookup but add our IPv6 classification
+      const geo = geoip.lookup(cleanIp);
+      if (geo) {
+        return {
+          ...geo,
+          networkType,
+          ipVersion: 'IPv6',
+          ipClass: ipType
+        };
+      } else {
+        // Use ipinfo.io API for IPv6 addresses (free tier has some limits)
+        try {
+          const response = await fetch(`https://ipinfo.io/${cleanIp}/json`);
+          if (response.ok) {
+            const data = await response.json();
+            return {
+              country: data.country || 'Unknown',
+              city: data.city || 'Unknown',
+              region: data.region || 'Unknown',
+              timezone: data.timezone || 'Unknown',
+              loc: data.loc || '',
+              org: data.org || 'Unknown',
+              networkType: data.org?.toLowerCase().includes('mobile') ? 'Mobile Network' : 
+                          data.org?.toLowerCase().includes('business') ? 'Business Network' : 'Residential Network',
+              ipVersion: 'IPv6',
+              ipClass: ipType
+            };
+          }
+        } catch (error) {
+          console.error('Error using ipinfo.io API:', error);
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Error parsing IP address:', e);
   }
-  */
   
-  // For now, just return unknown
+  // Try GeoIP lookup (works better for IPv4)
+  const geo = geoip.lookup(cleanIp);
+  
+  if (geo) {
+    // Add network type detection
+    let networkType = 'Residential Network';
+    
+    // Some basic heuristics to guess network type
+    if (geo.country === 'US' && cleanIp.includes('mobile')) {
+      networkType = 'Mobile Network';
+    } else if (geo.org && geo.org.toLowerCase().includes('mobile')) {
+      networkType = 'Mobile Network';
+    } else if (geo.org && (geo.org.toLowerCase().includes('business') || 
+                          geo.org.toLowerCase().includes('corporate'))) {
+      networkType = 'Business Network';
+    }
+    
+    return {
+      ...geo,
+      networkType,
+      ipVersion: cleanIp.includes(':') ? 'IPv6' : 'IPv4'
+    };
+  }
+  
+  // Try ipinfo.io as a fallback
+  try {
+    const response = await fetch(`https://ipinfo.io/${cleanIp}/json`);
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        country: data.country || 'Unknown',
+        city: data.city || 'Unknown',
+        region: data.region || 'Unknown',
+        timezone: data.timezone || 'Unknown',
+        loc: data.loc || '',
+        org: data.org || 'Unknown',
+        networkType: data.org?.toLowerCase().includes('mobile') ? 'Mobile Network' : 
+                   data.org?.toLowerCase().includes('business') ? 'Business Network' : 'Residential Network',
+        ipVersion: cleanIp.includes(':') ? 'IPv6' : 'IPv4'
+      };
+    }
+  } catch (error) {
+    console.error('Error using ipinfo.io API:', error);
+  }
+  
+  // If all else fails
   return {
     country: 'Unknown',
     city: 'Unknown',
-    note: 'In production, connect to a geolocation API or service'
+    networkType: cleanIp.includes(':') ? 'IPv6 Network' : 'IPv4 Network',
+    ipVersion: cleanIp.includes(':') ? 'IPv6' : 'IPv4',
+    note: 'Limited geolocation information available'
   };
 }

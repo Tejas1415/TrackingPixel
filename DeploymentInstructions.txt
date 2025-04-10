@@ -19,24 +19,30 @@ npm init -y
 npm install express multer uuid path fs 
 ```
 
-### Step 2: Create Directories
+### Step 2: Install Additional Dependencies
+```bash
+# Install geolocation and IP address handling packages
+npm install geoip-lite ipaddr.js
+```
+
+### Step 3: Create Directories
 ```bash
 mkdir uploads
 mkdir public
 ```
 
-### Step 3: Create Server File
+### Step 4: Create Server File
 Create a file named `server.js` in the root directory and copy the server code provided.
 
-### Step 4: Create Client Interface
+### Step 5: Create Client Interface
 Copy the `index.html` file to the `public` directory.
 
-### Step 5: Start the Server Locally
+### Step 6: Start the Server Locally
 ```bash
 node server.js
 ```
 
-You should see: "Server running on http://localhost:3000"
+You should see: "Server running on http://localhost:5050"
 
 ## Production Deployment
 
@@ -63,7 +69,7 @@ You should see: "Server running on http://localhost:3000"
    
    # Install dependencies
    cd tracking-system
-   npm install
+   npm install express multer uuid path fs geoip-lite ipaddr.js
    
    # Start with PM2
    pm2 start server.js --name "tracking-system"
@@ -88,7 +94,7 @@ You should see: "Server running on http://localhost:3000"
        server_name your-domain.com www.your-domain.com;
        
        location / {
-           proxy_pass http://localhost:3000;
+           proxy_pass http://localhost:5050;
            proxy_http_version 1.1;
            proxy_set_header Upgrade $http_upgrade;
            proxy_set_header Connection 'upgrade';
@@ -128,7 +134,7 @@ You should see: "Server running on http://localhost:3000"
 
    Update your server.js to use Heroku's PORT:
    ```javascript
-   const port = process.env.PORT || 3000;
+   const port = process.env.PORT || 5050;
    ```
 
 4. **Deploy to Heroku**:
@@ -150,10 +156,15 @@ You should see: "Server running on http://localhost:3000"
 
 ### 1. Enable Geolocation API
 
-To get accurate location data, uncomment the geolocation code in server.js and add your API key:
+The application already includes built-in geolocation capabilities using:
+
+1. **geoip-lite**: For fast local lookups (less accurate but no API limits)
+2. **ipinfo.io API integration**: For more accurate results (requires API key)
+
+To enhance the geolocation with a commercial API:
 
 ```javascript
-// Find this code in server.js and uncomment it
+// Find this code in server.js and update the API key
 try {
   const response = await fetch(`https://ipinfo.io/${ip}/json?token=YOUR_TOKEN_HERE`);
   const data = await response.json();
@@ -169,6 +180,8 @@ try {
   return { country: 'Unknown', city: 'Unknown' };
 }
 ```
+
+The system has a fallback mechanism that will use the free geoip-lite database when the API is unavailable or rate-limited.
 
 ### 2. Set Up a Database (Optional)
 
