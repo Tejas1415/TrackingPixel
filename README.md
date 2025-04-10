@@ -1,5 +1,3 @@
-# TrackingPixel
-An application to embed information into an image and record who opened that image for tracking purposes
 # Image Tracking System Guide
 
 This guide explains how to set up and use the advanced image tracking system for monitoring when and how someone views your shared content. This system offers multiple tracking methods and collects comprehensive viewer information.
@@ -45,6 +43,17 @@ When someone views your content, the system records:
 npm install express multer uuid path fs
 ```
 
+### Additional Dependencies
+
+The system uses several specialized NPM packages for enhanced functionality:
+
+```bash
+npm install geoip-lite ipaddr.js
+```
+
+- **geoip-lite**: Used for IP geolocation lookup to determine viewers' approximate location
+- **ipaddr.js**: Used for IP address parsing and classification (IPv4/IPv6, private/public)
+
 3. Create the required directories:
 
 ```bash
@@ -58,7 +67,7 @@ mkdir public
 node server.js
 ```
 
-5. The server will run on port 3000 by default (customize via PORT environment variable)
+5. The server will run on port 5050 by default (customize via PORT environment variable)
 
 ## How to Use
 
@@ -93,14 +102,24 @@ node server.js
 
 ## Enhanced Geolocation
 
-For production use, the system includes code to integrate with geolocation APIs:
+The system includes built-in geolocation capabilities:
 
-1. Uncomment the geolocation API code in server.js
-2. Sign up for a service like ipinfo.io, ipapi.co, or similar
-3. Add your API key to the configuration
-4. Deploy to your production server
+1. **geoip-lite database**: Local IP-based geolocation that works without external API calls
+2. **ipaddr.js**: Parsing and identifying IP address types (IPv4/IPv6, public/private)
+3. **ipinfo.io API integration**: As a fallback for more accurate results
 
-This will provide accurate location data including country, city, region, and coordinates.
+For production use, it's recommended to enhance the geolocation:
+
+1. Sign up for an API key at ipinfo.io or similar service
+2. Update the API key in the getIPGeolocation function in server.js
+3. Deploy to your production server
+
+The current implementation provides:
+- Basic IP classification (mobile/residential/business networks)
+- Country, city, and region detection
+- Timezone estimation
+- Coordinates (latitude/longitude)
+- Network type detection (IPv4/IPv6)
 
 ## Security and Privacy Considerations
 
