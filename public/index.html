@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Image Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .panel {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+        }
+        .image-preview {
+            max-width: 100%;
+            border: 1px solid #ddd;
+            margin: 15px 0;
+        }
+        .btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .hidden {
+            display: none;
+        }
+        #qrcode {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+        }
+        #qrcode img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.0/build/qrcode.min.js"></script>
+</head>
+<body>
+    <h1>Simple Image Tracker</h1>
+    
+    <div class="panel">
+        <h2>Upload Image</h2>
+        <input type="file" id="imageUpload" accept="image/*">
+        <button class="btn" id="uploadBtn">Upload</button>
+        <div id="uploadStatus" class="status hidden"></div>
+    </div>
+    
+    <div class="panel hidden" id="resultPanel">
+        <h2>Your Trackable Image</h2>
+        
+        <div>
+            <p><strong>Tracking ID:</strong> <span id="trackingId"></span></p>
+            <img id="trackableImage" class="image-preview">
+            <div id="shareableLink" style="margin-top: 20px; padding: 10px; background-color: #f0f0f0; border-radius: 4px;">
+                <p><strong>Tracking URL:</strong> <span id="linkText"></span></p>
+                <button class="btn" id="copyBtn" style="background-color: #2196F3;">Copy URL</button>
+                <div style="margin-top: 15px;">
+                    <p><strong>Or scan this QR code:</strong></p>
+                    <div id="qrcode" style="margin: 10px auto; background: white; padding: 10px; display: inline-block; width: 160px; height: 160px; border: 1px solid #ddd;"></div>
+                </div>
+                
+                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;">
+                    <p><strong>Email Image Tracking:</strong></p>
+                    <p style="margin-bottom: 10px;"><small>Use this HTML code to embed a trackable image in emails:</small></p>
+                    <textarea id="emailHtml" style="width: 100%; height: 60px; padding: 8px; font-family: monospace; margin-bottom: 10px;" readonly></textarea>
+                    <button class="btn" id="copyEmailHtmlBtn" style="background-color: #FF5722;">Copy HTML Code</button>
+                    <p style="margin-top: 10px;"><small>The image will track whenever the email is opened</small></p>
+                </div>
+                
+                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;">
+                    <p><strong>Downloadable Tracking Image:</strong> <span style="background-color: #FFC107; color: #333; padding: 3px 6px; font-size: 10px; border-radius: 3px; margin-left: 5px;">ADVANCED</span></p>
+                    <p style="margin-bottom: 10px;"><small>Download and share this special image file that can track views:</small></p>
+                    <button class="btn" id="downloadTrackableBtn" style="background-color: #4CAF50; margin-bottom: 10px;">Download Trackable Image</button>
+                    <div style="margin-top: 5px;">
+                        <p><small><strong>Instructions:</strong> Send this downloaded file to recipients. When they open it, you'll see their details in the tracking table.</small></p>
+                        <p><small><strong>Note:</strong> This works best in WhatsApp Web, email attachments, and direct shares. Recipients must open the file with a browser.</small></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <h3>How to track people:</h3>
+        <ol>
+            <li>Copy the tracking URL above</li>
+            <li>Share this URL directly in WhatsApp, email, etc.</li>
+            <li>When someone views the URL, their info will appear in the tracking table below</li>
+            <li>Their browser info, device type, and other details will be automatically detected</li>
+            <li>For email tracking, copy the HTML code and paste it into your email's HTML content</li>
+            <li>For stealth tracking, download the trackable image and share it directly - it looks like a regular image but tracks when opened</li>
+        </ol>
+        
+        <button class="btn" id="downloadBtn">Download Image</button>
+        <button class="btn" id="refreshBtn">Refresh Tracking Data</button>
+        
+        <h3>Tracking Results</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>IP Address</th>
+                    <th>Browser</th>
+                    <th>OS</th>
+                    <th>Location</th>
+                    <th>Screen</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody id="trackingResults">
+                <tr>
+                    <td colspan="7" id="noViews">No views recorded yet</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elements
+            const imageUpload = document.getElementById('imageUpload');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const uploadStatus = document.getElementById('uploadStatus');
+            const resultPanel = document.getElementById('resultPanel');
+            const trackingId = document.getElementById('trackingId');
+            const trackableImage = document.getElementById('trackableImage');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const refreshBtn = document.getElementById('refreshBtn');
+            const trackingResults = document.getElementById('trackingResults');
+            const noViews = document.getElementById('noViews');
+            const linkText = document.getElementById('linkText');
+            const copyBtn = document.getElementById('copyBtn');
+            const copyEmailHtmlBtn = document.getElementById('copyEmailHtmlBtn');
+            
+            // Current tracking info
+            let currentTrackingId = '';
+            let imageUrl = '';
+            let shareableUrl = '';
+            
+            // Show status message
+            function showStatus(message, isError = false) {
+                uploadStatus.textContent = message;
+                uploadStatus.className = isError ? 'status error' : 'status success';
+                uploadStatus.classList.remove('hidden');
+            }
+            
+            // Handle image upload
+            uploadBtn.addEventListener('click', async function() {
+                if (!imageUpload.files || imageUpload.files.length === 0) {
+                    showStatus('Please select an image first', true);
+                    return;
+                }
+                
+                // Clear previous status
+                uploadStatus.classList.add('hidden');
+                
+                const file = imageUpload.files[0];
+                const formData = new FormData();
+                formData.append('image', file);
+                
+                try {
+                    showStatus('Uploading image...');
+                    
+                    const response = await fetch('/api/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (!response.ok || !result.success) {
+                        throw new Error(result.error || 'Upload failed');
+                    }
+                    
+                    // Store tracking info
+                    currentTrackingId = result.trackingId;
+                    imageUrl = result.imageUrl;
+                    
+                    // Create shareable links
+                    shareableUrl = `${window.location.origin}/view/${currentTrackingId}`;
+                    linkText.textContent = shareableUrl;
+                    
+                    // Create email trackable image HTML
+                    const emailImageUrl = `${window.location.origin}/email-image/${currentTrackingId}`;
+                    const emailHtml = document.getElementById('emailHtml');
+                    emailHtml.value = `<img src="${emailImageUrl}" alt="Image" width="100%" style="max-width:600px;">`;
+                    
+                    // Generate QR code for the tracking URL
+                    const qrCodeElement = document.getElementById('qrcode');
+                    qrCodeElement.innerHTML = ''; // Clear previous QR code
+                    
+                    // Create an img element instead of canvas
+                    const qrImg = document.createElement('img');
+                    qrImg.alt = "QR Code";
+                    qrImg.style.width = "160px";
+                    qrImg.style.height = "160px";
+                    
+                    try {
+                        // Generate QR code as data URL
+                        QRCode.toDataURL(shareableUrl, { 
+                            width: 160,
+                            margin: 1,
+                            color: {
+                                dark: '#000000',
+                                light: '#ffffff'
+                            }
+                        }, function(error, url) {
+                            if (error) {
+                                console.error('Error generating QR code:', error);
+                                // Use fallback QR code service
+                                qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(shareableUrl)}`;
+                                qrCodeElement.appendChild(qrImg);
+                            } else {
+                                qrImg.src = url;
+                                qrCodeElement.appendChild(qrImg);
+                            }
+                        });
+                    } catch (error) {
+                        console.error('QR code generation error:', error);
+                        // Use fallback QR code service
+                        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(shareableUrl)}`;
+                        qrCodeElement.appendChild(qrImg);
+                    }
+                    
+                    // Update the UI
+                    trackingId.textContent = currentTrackingId;
+                    
+                    // Add error handling for image loading
+                    trackableImage.onerror = function() {
+                        console.error('ERROR Fetching Image error');
+                        showStatus('Error loading the image. Please try again.', true);
+                    };
+                    
+                    trackableImage.onload = function() {
+                        console.log('Image loaded successfully');
+                    };
+                    
+                    // Make sure we're using the full URL with origin if needed
+                    if (imageUrl.startsWith('/')) {
+                        trackableImage.src = window.location.origin + imageUrl;
+                    } else {
+                        trackableImage.src = imageUrl;
+                    }
+                    
+                    resultPanel.classList.remove('hidden');
+                    
+                    showStatus('Image uploaded successfully!');
+                    
+                    // Load initial tracking data
+                    await loadTrackingData();
+                    
+                    // Add tracking pixel to image HTML
+                    const trackingPixel = document.createElement('img');
+                    trackingPixel.src = `/track-view/${currentTrackingId}`;
+                    trackingPixel.style.display = 'none';
+                    document.body.appendChild(trackingPixel);
+                    
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    showStatus(`Error: ${error.message}`, true);
+                }
+            });
+            
+            // Handle image download
+            downloadBtn.addEventListener('click', function() {
+                if (imageUrl) {
+                    const a = document.createElement('a');
+                    a.href = imageUrl;
+                    a.download = `trackable_image${getFileExtension(imageUpload.files[0].name)}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }
+            });
+            
+            // Handle refresh button
+            refreshBtn.addEventListener('click', function() {
+                if (currentTrackingId) {
+                    loadTrackingData();
+                }
+            });
+            
+            // Handle copy link button
+            copyBtn.addEventListener('click', function() {
+                if (shareableUrl) {
+                    navigator.clipboard.writeText(shareableUrl)
+                        .then(() => {
+                            copyBtn.textContent = 'Copied!';
+                            setTimeout(() => {
+                                copyBtn.textContent = 'Copy URL';
+                            }, 2000);
+                        })
+                        .catch(err => {
+                            console.error('Error copying text: ', err);
+                        });
+                }
+            });
+            
+            // Handle copy email HTML button
+            copyEmailHtmlBtn.addEventListener('click', function() {
+                const emailHtml = document.getElementById('emailHtml');
+                if (emailHtml.value) {
+                    navigator.clipboard.writeText(emailHtml.value)
+                        .then(() => {
+                            copyEmailHtmlBtn.textContent = 'Copied!';
+                            setTimeout(() => {
+                                copyEmailHtmlBtn.textContent = 'Copy HTML Code';
+                            }, 2000);
+                        })
+                        .catch(err => {
+                            console.error('Error copying text: ', err);
+                        });
+                }
+            });
+            
+            // Handle download trackable image button
+            const downloadTrackableBtn = document.getElementById('downloadTrackableBtn');
+            downloadTrackableBtn.addEventListener('click', function() {
+                if (currentTrackingId) {
+                    const downloadUrl = `${window.location.origin}/downloadable-tracker/${currentTrackingId}`;
+                    
+                    // Create a temporary link to trigger the download
+                    const tempLink = document.createElement('a');
+                    tempLink.href = downloadUrl;
+                    // The server sets the filename with Content-Disposition header
+                    document.body.appendChild(tempLink);
+                    tempLink.click();
+                    document.body.removeChild(tempLink);
+                    
+                    showStatus('Trackable image download started!');
+                }
+            });
+            
+            // Load tracking data
+            async function loadTrackingData() {
+                if (!currentTrackingId) return;
+                
+                try {
+                    const response = await fetch(`/api/tracking/${currentTrackingId}`);
+                    const result = await response.json();
+                    
+                    if (!response.ok || !result.success) {
+                        throw new Error(result.error || 'Failed to load tracking data');
+                    }
+                    
+                    updateTrackingTable(result.views);
+                } catch (error) {
+                    console.error('Error loading tracking data:', error);
+                }
+            }
+            
+            // Update tracking table
+            function updateTrackingTable(views) {
+                if (!views || views.length === 0) {
+                    noViews.style.display = '';
+                    return;
+                }
+                
+                noViews.style.display = 'none';
+                trackingResults.innerHTML = '';
+                
+                views.forEach(view => {
+                    const row = document.createElement('tr');
+                    
+                    const timeCell = document.createElement('td');
+                    timeCell.textContent = new Date(view.timestamp).toLocaleString();
+                    
+                    const ipCell = document.createElement('td');
+                    ipCell.textContent = view.ip;
+                    if (view.ipInfo) {
+                        const ipDetails = document.createElement('div');
+                        ipDetails.style.fontSize = '0.8em';
+                        ipDetails.style.color = '#555';
+                        ipDetails.style.marginTop = '3px';
+                        
+                        // Add network type and version
+                        const ipTypeText = [];
+                        if (view.ipInfo.networkType) ipTypeText.push(view.ipInfo.networkType);
+                        if (view.ipInfo.version) ipTypeText.push('IPv' + view.ipInfo.version);
+                        if (ipTypeText.length > 0) {
+                            ipDetails.textContent = ipTypeText.join(' · ');
+                        }
+                        
+                        // Add provider if available
+                        if (view.ipInfo.isp || view.ipInfo.provider || view.ipInfo.org || view.ipInfo.asn) {
+                            const providerSpan = document.createElement('div');
+                            providerSpan.textContent = view.ipInfo.isp || view.ipInfo.provider || view.ipInfo.org || view.ipInfo.asn;
+                            providerSpan.style.fontSize = '0.85em';
+                            providerSpan.style.fontStyle = 'italic';
+                            ipDetails.appendChild(providerSpan);
+                        }
+                        
+                        ipCell.appendChild(ipDetails);
+                    }
+                    
+                    const browserCell = document.createElement('td');
+                    browserCell.textContent = view.userAgent || 'Unknown';
+                    
+                    const osCell = document.createElement('td');
+                    osCell.textContent = view.operatingSystem || 'Unknown';
+                    
+                    const locationCell = document.createElement('td');
+                    // Build a more complete location string
+                    const locationParts = [];
+                    if (view.city && view.city !== 'Unknown') locationParts.push(view.city);
+                    if (view.region && view.region !== 'Unknown') locationParts.push(view.region);
+                    if (view.country && view.country !== 'Unknown') locationParts.push(view.country);
+                    
+                    locationCell.textContent = locationParts.length > 0 ? locationParts.join(', ') : 'Unknown';
+                    
+                    // Add coordinates if available
+                    if (view.loc && view.loc.includes(',')) {
+                        const coordsDiv = document.createElement('div');
+                        coordsDiv.style.fontSize = '0.8em';
+                        coordsDiv.style.color = '#555';
+                        coordsDiv.style.marginTop = '3px';
+                        
+                        const [lat, lon] = view.loc.split(',');
+                        const coordsText = `${parseFloat(lat).toFixed(2)}°, ${parseFloat(lon).toFixed(2)}°`;
+                        coordsDiv.textContent = coordsText;
+                        
+                        // Add a Google Maps link
+                        const mapsLink = document.createElement('a');
+                        mapsLink.href = `https://www.google.com/maps?q=${lat},${lon}`;
+                        mapsLink.target = '_blank';
+                        mapsLink.textContent = '🗺️ Map';
+                        mapsLink.style.fontSize = '0.8em';
+                        mapsLink.style.marginLeft = '8px';
+                        mapsLink.style.color = '#1a73e8';
+                        coordsDiv.appendChild(mapsLink);
+                        
+                        locationCell.appendChild(coordsDiv);
+                    }
+                    
+                    // Add timezone if available
+                    if (view.timezone) {
+                        const timezoneDiv = document.createElement('div');
+                        timezoneDiv.style.fontSize = '0.8em';
+                        timezoneDiv.style.color = '#555';
+                        timezoneDiv.style.marginTop = '3px';
+                        timezoneDiv.textContent = `TZ: ${view.timezone}`;
+                        locationCell.appendChild(timezoneDiv);
+                    }
+                    
+                    // Add IP address info if available
+                    if (view.ip) {
+                        const ipDiv = document.createElement('div');
+                        ipDiv.style.fontSize = '0.8em';
+                        ipDiv.style.color = '#777';
+                        ipDiv.style.marginTop = '3px';
+                        ipDiv.style.fontFamily = 'monospace';
+                        
+                        // Format IP address with details
+                        let ipText = view.ip;
+                        if (view.ipInfo) {
+                            if (view.ipInfo.type) ipText += ` (${view.ipInfo.type})`;
+                            if (view.ipInfo.version) ipText += ` IPv${view.ipInfo.version}`;
+                        }
+                        ipDiv.textContent = ipText;
+                        
+                        // Add ISP/ASN info if available
+                        if (view.org || (view.ipInfo && (view.ipInfo.asn || view.ipInfo.isp))) {
+                            const ispDiv = document.createElement('div');
+                            ispDiv.style.fontSize = '0.8em';
+                            ispDiv.style.color = '#777';
+                            ispDiv.textContent = view.org || (view.ipInfo ? (view.ipInfo.isp || view.ipInfo.asn) : '');
+                            locationCell.appendChild(ispDiv);
+                        }
+                        
+                        locationCell.appendChild(ipDiv);
+                    }
+                    
+                    const screenCell = document.createElement('td');
+                    screenCell.textContent = view.screenResolution || 
+                        (view.enhanced ? `${view.enhanced.screenWidth}×${view.enhanced.screenHeight}` : 'Unknown');
+                    
+                    const detailsCell = document.createElement('td');
+                    
+                    // Create details string
+                    let details = [];
+                    if (view.source) details.push(`Source: ${view.source}`);
+                    if (view.clickCount) details.push(`Clicks: ${view.clickCount}`);
+                    if (view.lastClickTime) details.push(`Last Click: ${new Date(view.lastClickTime).toLocaleString()}`);
+                    if (view.referrer && view.referrer !== 'Direct') details.push(`From: ${view.referrer}`);
+                    if (view.language) details.push(`Lang: ${view.language}`);
+                    if (view.timezone) details.push(`TZ: ${view.timezone}`);
+                    if (view.enhanced) {
+                        if (view.enhanced.deviceMemory) details.push(`RAM: ${view.enhanced.deviceMemory}`);
+                        if (view.enhanced.hardwareConcurrency) details.push(`CPU: ${view.enhanced.hardwareConcurrency} cores`);
+                        if (view.enhanced.connectionType) details.push(`Net: ${view.enhanced.connectionType}`);
+                    }
+                    
+                    detailsCell.textContent = details.length > 0 ? details.join(' | ') : 'No details';
+                    
+                    // Add tooltip with all data for debugging
+                    detailsCell.title = JSON.stringify(view, null, 2);
+                    detailsCell.style.cursor = 'help';
+                    
+                    // Highlight row based on source
+                    if (view.source === 'Downloaded HTML Image') {
+                        row.style.backgroundColor = '#e8f5e9';  // Light green
+                    } else if (view.clickCount) {
+                        row.style.backgroundColor = '#f3e5f5';  // Light purple
+                    } else if (view.source === 'Email Embed') {
+                        row.style.backgroundColor = '#fff8e1';  // Light amber
+                    }
+                    
+                    row.appendChild(timeCell);
+                    row.appendChild(ipCell);
+                    row.appendChild(browserCell);
+                    row.appendChild(osCell);
+                    row.appendChild(locationCell);
+                    row.appendChild(screenCell);
+                    row.appendChild(detailsCell);
+                    
+                    trackingResults.appendChild(row);
+                });
+            }
+            
+            // Helper to get file extension
+            function getFileExtension(filename) {
+                return filename.substring(filename.lastIndexOf('.'));
+            }
+        });
+    </script>
+</body>
+</html>
