@@ -1,6 +1,6 @@
 # Image Tracking System Guide
 
-This guide explains how to set up and use the advanced image tracking system for monitoring when and how someone views your shared content. This system offers multiple tracking methods and collects comprehensive viewer information.
+This guide explains how to set up and use the advanced image tracking system for monitoring when and how someone views your shared content. This system offers multiple tracking methods and collects comprehensive viewer information (All Legal Elements)
 
 ## Features
 
